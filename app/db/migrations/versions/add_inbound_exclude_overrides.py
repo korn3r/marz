@@ -18,15 +18,15 @@ depends_on = None
 def upgrade():
     op.create_table(
         "inbound_exclude_overrides",
-        sa.Column("proxy_id", sa.Integer(), nullable=False),
-        sa.Column("inbound_tag", sa.String(length=256), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["proxy_id"],
-            ["proxies.id"],
+        sa.Column(
+            "proxy_id",
+            sa.Integer(),
+            nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["inbound_tag"],
-            ["inbounds.tag"],
+        sa.Column(
+            "inbound_tag",
+            sa.String(length=256),
+            nullable=False,
         ),
         sa.PrimaryKeyConstraint(
             "proxy_id",

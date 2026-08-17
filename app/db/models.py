@@ -148,13 +148,12 @@ class User(Base):
             for inbound in xray.config.inbounds_by_protocol.get(proxy.type, []):
                 tag = inbound["tag"]
 
-                if tag in excluded_tags:
+                if is_inbound_globally_excluded(tag):
+                    if tag in overrides:
+                        _[proxy.type].append(tag)
                     continue
 
-                if (
-                    is_inbound_globally_excluded(tag)
-                    and tag not in overrides
-                ):
+                if tag in excluded_tags:
                     continue
 
                 _[proxy.type].append(tag)
