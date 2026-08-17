@@ -28,6 +28,7 @@ from app.db.models import (
     User,
     UserTemplate,
     UserUsageResetLogs,
+    excluded_inbounds_association,
 )
 from app.models.admin import AdminCreate, AdminModify, AdminPartialModify
 from app.models.node import NodeCreate, NodeModify, NodeStatus, NodeUsageResponse
@@ -40,10 +41,15 @@ from app.models.user import (
     UserResponse,
     UserStatus,
     UserUsageResponse,
+    is_inbound_globally_excluded,
 )
 from app.models.user_template import UserTemplateCreate, UserTemplateModify
 from app.utils.helpers import calculate_expiration_days, calculate_usage_percent
-from config import NOTIFY_DAYS_LEFT, NOTIFY_REACHED_USAGE_PERCENT, USERS_AUTODELETE_DAYS
+from config import (
+    NOTIFY_DAYS_LEFT,
+    NOTIFY_REACHED_USAGE_PERCENT,
+    USERS_AUTODELETE_DAYS,
+)
 
 
 def add_default_host(db: Session, inbound: ProxyInbound):
@@ -372,10 +378,22 @@ def create_user(db: Session, user: UserCreate, admin: Admin = None) -> User:
         excluded_inbounds = [
             get_or_create_inbound(db, tag) for tag in excluded_inbounds_tags[proxy_type]
         ]
+
+        settings_dict = settings.dict(no_obj=True)
+
+        overrides = [
+            get_or_create_inbound(db, tag)
+            for tag in user.inbounds.get(proxy_type, [])
+            if is_inbound_globally_excluded(tag)
+        ]
+
         proxies.append(
-            Proxy(type=proxy_type.value,
-                  settings=settings.dict(no_obj=True),
-                  excluded_inbounds=excluded_inbounds)
+            Proxy(
+                type=proxy_type.value,
+                settings=settings_dict,
+                excluded_inbounds=excluded_inbounds,
+                inbound_exclude_overrides=overrides,
+            )
         )
 
     dbuser = User(
@@ -414,10 +432,18 @@ def remove_user(db: Session, dbuser: User) -> User:
     Returns:
         User: The removed user object.
     """
+    proxy_ids = [proxy.id for proxy in dbuser.proxies]
+
+    if proxy_ids:
+        db.execute(
+            delete(excluded_inbounds_association).where(
+                excluded_inbounds_association.c.proxy_id.in_(proxy_ids)
+            )
+        )
+
     db.delete(dbuser)
     db.commit()
     return dbuser
-
 
 def remove_users(db: Session, dbusers: List[User]):
     """
@@ -427,11 +453,24 @@ def remove_users(db: Session, dbusers: List[User]):
         db (Session): Database session.
         dbusers (List[User]): List of user objects to be removed.
     """
+    proxy_ids = [
+        proxy.id
+        for dbuser in dbusers
+        for proxy in dbuser.proxies
+    ]
+
+    if proxy_ids:
+        db.execute(
+            delete(excluded_inbounds_association).where(
+                excluded_inbounds_association.c.proxy_id.in_(proxy_ids)
+            )
+        )
+
     for dbuser in dbusers:
         db.delete(dbuser)
+
     db.commit()
     return
-
 
 def update_user(db: Session, dbuser: User, modify: UserModify) -> User:
     """
@@ -451,22 +490,40 @@ def update_user(db: Session, dbuser: User, modify: UserModify) -> User:
             dbproxy = db.query(Proxy) \
                 .where(Proxy.user == dbuser, Proxy.type == proxy_type) \
                 .first()
+
+            settings_dict = settings.dict(no_obj=True)
+
             if dbproxy:
-                dbproxy.settings = settings.dict(no_obj=True)
+                dbproxy.settings = settings_dict
             else:
-                new_proxy = Proxy(type=proxy_type, settings=settings.dict(no_obj=True))
+                new_proxy = Proxy(
+                    type=proxy_type,
+                    settings=settings_dict,
+                )
                 dbuser.proxies.append(new_proxy)
                 added_proxies.update({proxy_type: new_proxy})
+
         for proxy in dbuser.proxies:
             if proxy.type not in modify.proxies:
                 db.delete(proxy)
+
     if modify.inbounds:
         for proxy_type, tags in modify.excluded_inbounds.items():
             dbproxy = db.query(Proxy) \
                 .where(Proxy.user == dbuser, Proxy.type == proxy_type) \
                 .first() or added_proxies.get(proxy_type)
+
             if dbproxy:
-                dbproxy.excluded_inbounds = [get_or_create_inbound(db, tag) for tag in tags]
+                dbproxy.excluded_inbounds = [
+                    get_or_create_inbound(db, tag)
+                    for tag in tags
+                ]
+
+                dbproxy.inbound_exclude_overrides = [
+                    get_or_create_inbound(db, tag)
+                    for tag in modify.inbounds.get(proxy_type, [])
+                    if is_inbound_globally_excluded(tag)
+                ]
 
     if modify.status is not None:
         dbuser.status = modify.status

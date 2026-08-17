@@ -1,4 +1,5 @@
-import { joinPaths } from "@remix-run/router";
+import { joinPaths } from "../utils/joinPaths";
+import { getWebrootPath } from "../utils/getWebrootPath";
 
 import fa from "date-fns/locale/fa-IR";
 import ru from "date-fns/locale/ru";
@@ -37,7 +38,7 @@ i18n
             },
             backend: {
                 loadPath: joinPaths([
-                    import.meta.env.BASE_URL,
+                    getWebrootPath(),
                     `statics/locales/{{lng}}.json`,
                 ]),
             },

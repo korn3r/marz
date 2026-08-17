@@ -297,7 +297,7 @@ def process_inbounds_and_tags(
 
                 host_inbound.update(
                     {
-                        "port": host["port"] or inbound["port"],
+                        "port": host["port"] or inbound["port"] or 443,
                         "sni": sni,
                         "host": req_host,
                         "tls": inbound["tls"] if host["tls"] is None else host["tls"],

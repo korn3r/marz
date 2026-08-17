@@ -1,0 +1,211 @@
+diff --git a/app/dashboard/__init__.py b/app/dashboard/__init__.py
+index ae8940a..231669a 100644
+--- a/app/dashboard/__init__.py
++++ b/app/dashboard/__init__.py
+@@ -3,48 +3,85 @@ import os
+ import subprocess
+ from pathlib import Path
+ 
+-from app import app
+-from config import DEBUG, DASHBOARD_PATH, UVICORN_PORT
++from fastapi.responses import HTMLResponse
+ from fastapi.staticfiles import StaticFiles
+ 
++from app import app
++from config import DEBUG, DASHBOARD_PATH, HTTP_WEBROOT_PATH, UVICORN_PORT
++
++
+ base_dir = Path(__file__).parent
+-build_dir = base_dir / 'build'
+-statics_dir = build_dir / 'statics'
++build_dir = base_dir / "build"
++statics_dir = build_dir / "statics"
++
++
++def get_dashboard_html() -> str:
++    html_path = build_dir / "index.html"
++
++    if not html_path.is_file():
++        raise FileNotFoundError(
++            f"Dashboard index not found: {html_path}"
++        )
++
++    html = html_path.read_text(encoding="utf-8")
++
++    if HTTP_WEBROOT_PATH and HTTP_WEBROOT_PATH != "/":
++        html = html.replace(
++            '="/statics/',
++            f'="{HTTP_WEBROOT_PATH.rstrip("/")}/statics/',
++        )
++
++    return html
++
++
++def dashboard_index() -> HTMLResponse:
++    return HTMLResponse(
++        content=get_dashboard_html(),
++        status_code=200,
++    )
+ 
+ 
+ def build():
+     proc = subprocess.Popen(
+-        ['npm', 'run', 'build', '--', '--outDir', build_dir, '--assetsDir', 'statics'],
+-        cwd=base_dir
++        [
++            "npm",
++            "run",
++            "build",
++            "--",
++            "--outDir",
++            build_dir,
++            "--assetsDir",
++            "statics",
++        ],
++        cwd=base_dir,
+     )
+     proc.wait()
+ 
+-    with open(build_dir / 'index.html', 'r') as file:
+-        html = file.read()
+-
+-    with open(build_dir / '404.html', 'w') as file:
+-        file.write(html)
++    if proc.returncode != 0:
++        raise RuntimeError(
++            f"Dashboard build failed with exit code {proc.returncode}"
++        )
+ 
+ 
+ def run_dev():
+     proc = subprocess.Popen(
+         [
+-            'npm',
+-            'run',
+-            'dev',
+-            '--',
+-            '--host',
+-            '0.0.0.0',
+-            '--clearScreen',
+-            'false',
+-            '--base',
+-            os.path.join(DASHBOARD_PATH, ''),
++            "npm",
++            "run",
++            "dev",
++            "--",
++            "--host",
++            "0.0.0.0",
++            "--clearScreen",
++            "false",
++            "--base",
++            os.path.join(DASHBOARD_PATH, ""),
+         ],
+         env={
+             **os.environ,
+-            'UVICORN_PORT': str(UVICORN_PORT),
++            "UVICORN_PORT": str(UVICORN_PORT),
+         },
+-        cwd=base_dir
++        cwd=base_dir,
+     )
+ 
+     atexit.register(proc.terminate)
+@@ -55,16 +92,35 @@ def run_build():
+         build()
+ 
+     app.mount(
+-        DASHBOARD_PATH,
+-        StaticFiles(directory=build_dir, html=True),
+-        name="dashboard"
++        "/statics/",
++        StaticFiles(
++            directory=statics_dir,
++            html=False,
++        ),
++        name="statics",
+     )
+ 
+-    app.mount(
+-        '/statics/',
+-        StaticFiles(directory=statics_dir, html=True),
+-        name="statics"
+-    )
++    if HTTP_WEBROOT_PATH:
++        # When a webroot is configured, the dashboard is the
++        # root route of the mounted Marzban application.
++        app.add_api_route(
++            "/",
++            dashboard_index,
++            methods=["GET"],
++            response_class=HTMLResponse,
++            include_in_schema=False,
++            name="dashboard",
++        )
++    else:
++        # Default Marzban behavior.
++        app.add_api_route(
++            DASHBOARD_PATH.rstrip("/") + "/",
++            dashboard_index,
++            methods=["GET"],
++            response_class=HTMLResponse,
++            include_in_schema=False,
++            name="dashboard",
++        )
+ 
+ 
+ def startup():
+diff --git a/app/dashboard/index.html b/app/dashboard/index.html
+index 0c09b55..5558b54 100644
+--- a/app/dashboard/index.html
++++ b/app/dashboard/index.html
+@@ -39,4 +39,4 @@
+     <div id="root"></div>
+     <script type="module" src="/src/index.tsx"></script>
+   </body>
+-</html>
+\ No newline at end of file
++</html>
+diff --git a/app/dashboard/src/service/http.ts b/app/dashboard/src/service/http.ts
+index 0745341..605d001 100644
+--- a/app/dashboard/src/service/http.ts
++++ b/app/dashboard/src/service/http.ts
+@@ -1,8 +1,9 @@
+ import { FetchOptions, $fetch as ohMyFetch } from "ofetch";
+ import { getAuthToken } from "utils/authStorage";
++import { getWebrootPath } from "utils/getWebrootPath";
+ 
+ export const $fetch = ohMyFetch.create({
+-  baseURL: "/api/",
++  baseURL: `${getWebrootPath()}/api/`,
+ });
+ 
+ export const fetcher = <T = any>(
+diff --git a/app/dashboard/src/utils/getWebrootPath.ts b/app/dashboard/src/utils/getWebrootPath.ts
+new file mode 100644
+index 0000000..ac7f615
+--- /dev/null
++++ b/app/dashboard/src/utils/getWebrootPath.ts
+@@ -0,0 +1,22 @@
++export function getWebrootPath(): string {
++    const staticUrl = Array.from(
++        document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>(
++            'script[src], link[href]'
++        )
++    )
++        .map((element) => element.getAttribute("src") || element.getAttribute("href") || "")
++        .find((url) => url.includes("/statics/"));
++
++    if (!staticUrl) {
++        return "";
++    }
++
++    const pathname = new URL(staticUrl, window.location.origin).pathname;
++    const staticsIndex = pathname.indexOf("/statics/");
++
++    if (staticsIndex === -1) {
++        return "";
++    }
++
++    return pathname.slice(0, staticsIndex);
++}

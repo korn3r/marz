@@ -52,7 +52,7 @@ const InboundCard: FC<
     <Box as="label">
       <input {...inputProps} />
       <Box
-        w="fll"
+        w="full"
         position="relative"
         {...htmlProps}
         cursor="pointer"
@@ -221,7 +221,7 @@ const RadioCard: FC<
         )}
         <input {...inputProps} />
         <Box
-          w="fll"
+          w="full"
           position="relative"
           {...htmlProps}
           borderRadius="md"
@@ -279,11 +279,13 @@ const RadioCard: FC<
             p={0}
             onClick={toggleAccordion}
           >
-            <IconButton size="sm" aria-label="inbound settings">
+            <IconButton
+              size="sm"
+              aria-label="inbound settings"
+            >
               <SettingsIcon />
             </IconButton>
           </AccordionButton>
-
           <Text
             fontSize="sm"
             color={shouldBeDisabled ? "gray.400" : "gray.700"}
@@ -487,7 +489,8 @@ export const RadioGroup = forwardRef<any, RadioGroupProps>(
             useDashboard
               .getState()
               .inbounds.get(selectedItem[0] as ProtocolType)
-              ?.map((i) => i.tag)
+              ?.filter((i) => !i.excluded)
+              .map((i) => i.tag)
           );
         }
 

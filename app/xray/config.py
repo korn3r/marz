@@ -14,7 +14,12 @@ from app.db import models as db_models
 from app.models.proxy import ProxyTypes
 from app.models.user import UserStatus
 from app.utils.crypto import get_cert_SANs
-from config import DEBUG, XRAY_EXCLUDE_INBOUND_TAGS, XRAY_FALLBACKS_INBOUND_TAG
+from config import (
+    DEBUG,
+    XRAY_EXCLUDE_INBOUND_TAGS,
+    XRAY_FALLBACKS_INBOUND_TAG,
+)
+from app.models.user import is_inbound_globally_excluded
 
 
 def merge_dicts(a, b):  # B will override A dictionary key and values
@@ -163,7 +168,8 @@ class XRayConfig(dict):
                 "host": [],
                 "path": "",
                 "header_type": "",
-                "is_fallback": False
+                "is_fallback": False,
+                "excluded": is_inbound_globally_excluded(inbound["tag"]),
             }
 
             # port settings
@@ -367,12 +373,26 @@ class XRayConfig(dict):
                 db_models.User.username,
                 func.lower(db_models.Proxy.type).label('type'),
                 db_models.Proxy.settings,
-                func.group_concat(db_models.excluded_inbounds_association.c.inbound_tag).label('excluded_inbound_tags')
+                func.group_concat(
+                    func.distinct(
+                        db_models.excluded_inbounds_association.c.inbound_tag
+                    )
+                ).label('excluded_inbound_tags'),
+                func.group_concat(
+                    func.distinct(
+                        db_models.inbound_exclude_overrides_association.c.inbound_tag
+                    )
+                ).label('inbound_exclude_override_tags'),
             ).join(
-                db_models.Proxy, db_models.User.id == db_models.Proxy.user_id
+                db_models.Proxy,
+                db_models.User.id == db_models.Proxy.user_id
             ).outerjoin(
                 db_models.excluded_inbounds_association,
                 db_models.Proxy.id == db_models.excluded_inbounds_association.c.proxy_id
+            ).outerjoin(
+                db_models.inbound_exclude_overrides_association,
+                db_models.Proxy.id
+                == db_models.inbound_exclude_overrides_association.c.proxy_id
             ).filter(
                 db_models.User.status.in_([UserStatus.active, UserStatus.on_hold])
             ).group_by(
@@ -390,7 +410,12 @@ class XRayConfig(dict):
                     row.id,
                     row.username,
                     row.settings,
-                    [i for i in row.excluded_inbound_tags.split(',') if i] if row.excluded_inbound_tags else None
+                    [
+                        i for i in row.excluded_inbound_tags.split(",") if i
+                    ] if row.excluded_inbound_tags else None,
+                    [
+                        i for i in row.inbound_exclude_override_tags.split(",") if i
+                    ] if row.inbound_exclude_override_tags else None,
                 ))
 
             for proxy_type, rows in grouped_data.items():
@@ -403,10 +428,28 @@ class XRayConfig(dict):
                     clients = config.get_inbound(inbound['tag'])['settings']['clients']
 
                     for row in rows:
-                        user_id, username, settings, excluded_inbound_tags = row
+                        (
+                            user_id,
+                            username,
+                            settings,
+                            excluded_inbound_tags,
+                            inbound_exclude_override_tags,
+                        ) = row
 
-                        if excluded_inbound_tags and inbound['tag'] in excluded_inbound_tags:
+                        overrides = set(inbound_exclude_override_tags or [])
+
+                        if (
+                            is_inbound_globally_excluded(inbound['tag'])
+                            and inbound['tag'] not in overrides
+                        ):
                             continue
+
+                        if (
+                            excluded_inbound_tags
+                            and inbound['tag'] in excluded_inbound_tags
+                        ):
+                            continue
+
 
                         client = {
                             "email": f"{user_id}.{username}",

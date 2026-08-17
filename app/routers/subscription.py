@@ -20,6 +20,7 @@ from config import (
     USE_CUSTOM_JSON_FOR_V2RAYN,
     USE_CUSTOM_JSON_FOR_V2RAYNG,
     XRAY_SUBSCRIPTION_PATH,
+    XRAY_SUBSCRIPTION_URL_PREFIX,
 )
 
 client_config = {
@@ -32,7 +33,7 @@ client_config = {
                    "reverse": False}
 }
 
-router = APIRouter(tags=['Subscription'], prefix=f'/{XRAY_SUBSCRIPTION_PATH}')
+router = APIRouter(tags=['Subscription'])
 
 
 def get_subscription_user_info(user: UserResponse) -> dict:
@@ -65,10 +66,15 @@ def user_subscription(
             )
         )
 
+    if XRAY_SUBSCRIPTION_URL_PREFIX is not ("" and None):
+        PROFILE_WEB_URL = re.sub(r'https?:\/\/([^\/\s]+)', XRAY_SUBSCRIPTION_URL_PREFIX, str(request.url))
+    else:
+        PROFILE_WEB_URL = str(request.url)
+
     crud.update_user_sub(db, dbuser, user_agent)
     response_headers = {
         "content-disposition": f'attachment; filename="{user.username}"',
-        "profile-web-page-url": str(request.url),
+        "profile-web-page-url": PROFILE_WEB_URL,
         "support-url": SUB_SUPPORT_URL,
         "profile-title": encode_title(SUB_PROFILE_TITLE),
         "profile-update-interval": SUB_UPDATE_INTERVAL,
@@ -166,16 +172,21 @@ def user_get_usage(
 def user_subscription_with_client_type(
     request: Request,
     dbuser: UserResponse = Depends(get_validated_sub),
-    client_type: str = Path(..., regex="sing-box|clash-meta|clash|outline|v2ray|v2ray-json"),
+    client_type: str = Path(..., pattern="sing-box|clash-meta|clash|outline|v2ray|v2ray-json"),
     db: Session = Depends(get_db),
     user_agent: str = Header(default="")
 ):
     """Provides a subscription link based on the specified client type (e.g., Clash, V2Ray)."""
     user: UserResponse = UserResponse.model_validate(dbuser)
 
+    if XRAY_SUBSCRIPTION_URL_PREFIX is not ("" and None):
+        PROFILE_WEB_URL = re.sub(r'https?:\/\/([^\/\s]+)', XRAY_SUBSCRIPTION_URL_PREFIX, str(request.url))
+    else:
+        PROFILE_WEB_URL = str(request.url)
+
     response_headers = {
         "content-disposition": f'attachment; filename="{user.username}"',
-        "profile-web-page-url": str(request.url),
+        "profile-web-page-url": PROFILE_WEB_URL,
         "support-url": SUB_SUPPORT_URL,
         "profile-title": encode_title(SUB_PROFILE_TITLE),
         "profile-update-interval": SUB_UPDATE_INTERVAL,

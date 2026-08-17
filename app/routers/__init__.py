@@ -1,29 +1,36 @@
 from fastapi import APIRouter
+
 from . import (
-    admin, 
-    core, 
-    node, 
-    subscription, 
-    system, 
-    user_template, 
-    user,
+    admin,
+    core,
     home,
+    node,
+    system,
+    user,
+    user_template,
 )
 
-api_router = APIRouter()
 
-routers = [
+api_router = APIRouter(prefix="/api")
+
+api_routers = [
     admin.router,
     core.router,
     node.router,
-    subscription.router,
     system.router,
     user_template.router,
     user.router,
-    home.router,
 ]
 
-for router in routers:
+for router in api_routers:
     api_router.include_router(router)
 
-__all__ = ["api_router"]
+
+def include_routers(app, include_home: bool = True):
+    app.include_router(api_router)
+
+    if include_home:
+        app.include_router(home.router)
+
+
+__all__ = ["api_router", "include_routers"]

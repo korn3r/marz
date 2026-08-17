@@ -104,9 +104,13 @@ const formatUser = (user: User): FormType => {
 const getDefaultValues = (): FormType => {
   const defaultInbounds = Object.fromEntries(useDashboard.getState().inbounds);
   const inbounds: UserInbounds = {};
+
   for (const key in defaultInbounds) {
-    inbounds[key] = defaultInbounds[key].map((i) => i.tag);
+    inbounds[key] = defaultInbounds[key]
+      .filter((i) => !i.excluded)
+      .map((i) => i.tag);
   }
+
   return {
     selected_proxies: Object.keys(defaultInbounds) as ProxyKeys,
     data_limit: null,

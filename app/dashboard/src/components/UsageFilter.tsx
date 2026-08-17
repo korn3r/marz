@@ -314,7 +314,8 @@ export function createUsageConfig(
   series: any = [],
   labels: any = []
 ) {
-  const total = formatBytes((series as [number]).reduce((t, c) => (t += c), 0));
+  const values = series as number[];
+  const total = formatBytes(values.reduce((t, c) => t + c, 0));
   return {
     series: series,
     options: {
@@ -348,19 +349,31 @@ export function createUsageConfig(
         colors: undefined,
       },
       dataLabels: {
-        formatter: (val, { seriesIndex, w }) => {
-          return formatBytes(w.config.series[seriesIndex], 1);
+        formatter: (val, opts) => {
+          if (!opts) {
+            return "";
+          }
+
+          const { seriesIndex, w } = opts;
+          const values = w.config.series as number[];
+
+          return formatBytes(values[seriesIndex], 1);
         },
       },
       tooltip: {
         custom: ({ series, seriesIndex, dataPointIndex, w }) => {
-          const readable = formatBytes(series[seriesIndex], 1);
+          const values = series as unknown as number[];
+          const value = values[seriesIndex];
+
+          const readable = formatBytes(value, 1);
+
           const total = Math.max(
-            (series as [number]).reduce((t, c) => (t += c)),
+            values.reduce((t, c) => t + c, 0),
             1
           );
+
           const percent =
-            Math.round((series[seriesIndex] / total) * 1000) / 10 + "%";
+            Math.round((value / total) * 1000) / 10 + "%";
           return `
             <div style="
                     background-color: ${w.globals.colors[seriesIndex]};
@@ -371,7 +384,7 @@ export function createUsageConfig(
                     font-size:0.725rem;
                   "
             >
-              ${w.config.labels[seriesIndex]}: <b>${percent}, ${readable}</b>
+              ${w.config.labels?.[seriesIndex] ?? ""}: <b>${percent}, ${readable}</b>
             </div>
           `;
         },

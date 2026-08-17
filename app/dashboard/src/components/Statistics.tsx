@@ -5,9 +5,9 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import { useDashboard } from "contexts/DashboardContext";
-import { FC, PropsWithChildren, ReactElement, ReactNode } from "react";
+import { FC, PropsWithChildren, ReactElement, ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { fetch } from "service/http";
 import { formatBytes, numberWithCommas } from "utils/formatByte";
 
@@ -116,18 +116,29 @@ const StatisticCard: FC<PropsWithChildren<StatisticCardProps>> = ({
     </Card>
   );
 };
-export const StatisticsQueryKey = "statistics-query-key";
+export const StatisticsQueryKey = ["statistics-query-key"] as const;
+type SystemData = {
+  version: string;
+  users_active: number;
+  total_user: number;
+  incoming_bandwidth: number;
+  outgoing_bandwidth: number;
+  mem_used: number;
+  mem_total: number;
+};
 export const Statistics: FC<BoxProps> = (props) => {
   const { version } = useDashboard();
-  const { data: systemData } = useQuery({
+  const { data: systemData } = useQuery<SystemData>({
     queryKey: StatisticsQueryKey,
     queryFn: () => fetch("/system"),
     refetchInterval: 5000,
-    onSuccess: ({ version: currentVersion }) => {
-      if (version !== currentVersion)
-        useDashboard.setState({ version: currentVersion });
-    },
   });
+  useEffect(() => {
+    if (systemData && version !== systemData.version) {
+      useDashboard.setState({ version: systemData.version });
+    }
+  }, [systemData, version]);
+
   const { t } = useTranslation();
   return (
     <HStack

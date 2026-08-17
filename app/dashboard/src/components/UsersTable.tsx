@@ -34,7 +34,6 @@ import {
   PencilIcon,
   QrCodeIcon,
 } from "@heroicons/react/24/outline";
-import { ReactComponent as AddFileIcon } from "assets/add_file.svg";
 import classNames from "classnames";
 import { resetStrategy, statusColors } from "constants/UserSettings";
 import { useDashboard } from "contexts/DashboardContext";
@@ -48,6 +47,7 @@ import { OnlineBadge } from "./OnlineBadge";
 import { OnlineStatus } from "./OnlineStatus";
 import { Pagination } from "./Pagination";
 import { StatusBadge } from "./StatusBadge";
+import AddFileIcon from "assets/add_file.svg?react";
 
 const EmptySectionIcon = chakra(AddFileIcon);
 

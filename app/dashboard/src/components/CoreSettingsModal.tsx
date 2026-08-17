@@ -27,7 +27,8 @@ import {
   ArrowsPointingOutIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
-import { joinPaths } from "@remix-run/router";
+import { joinPaths } from "../utils/joinPaths";
+import { getWebrootPath } from "../utils/getWebrootPath";
 import classNames from "classnames";
 import { useCoreSettings } from "contexts/CoreSettingsContext";
 import { useDashboard } from "contexts/DashboardContext";
@@ -35,7 +36,7 @@ import debounce from "lodash.debounce";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ReadyState } from "react-use-websocket";
 import { useWebSocket } from "react-use-websocket/dist/lib/use-websocket";
 import { getAuthToken } from "utils/authStorage";
@@ -43,7 +44,6 @@ import { Icon } from "./Icon";
 import { JsonEditor } from "./JsonEditor";
 import "./JsonEditor/themes.js";
 import { useNodesQuery } from "contexts/NodesContext";
-
 export const MAX_NUMBER_OF_LOGS = 500;
 
 const UsageIcon = chakra(Cog6ToothIcon, {
@@ -71,7 +71,6 @@ export const ExitFullScreenIcon = chakra(ArrowsPointingInIcon, {
     h: 3,
   },
 });
-
 const getStatus = (status: string) => {
   return {
     [ReadyState.CONNECTING]: "connecting",
@@ -84,10 +83,9 @@ const getStatus = (status: string) => {
 
 const getWebsocketUrl = (nodeID: string) => {
   try {
-    let baseURL = new URL(
-      import.meta.env.VITE_BASE_API.startsWith("/")
-        ? window.location.origin + import.meta.env.VITE_BASE_API
-        : import.meta.env.VITE_BASE_API
+    const baseURL = new URL(
+      `${getWebrootPath()}/api/`,
+      window.location.origin
     );
 
     return (
@@ -110,7 +108,6 @@ let logsTmp: string[] = [];
 const CoreSettingModalContent: FC = () => {
 
   const { colorMode } = useColorMode();
-
   const { data: nodes } = useNodesQuery();
   const disabled = false;
   const [selectedNode, setNode] = useState<string>("");
@@ -125,7 +122,6 @@ const CoreSettingModalContent: FC = () => {
       setLogs([]);
     }
   };
-
   const { isEditingCore } = useDashboard();
   const {
     fetchCoreSettings,
@@ -143,11 +139,9 @@ const CoreSettingModalContent: FC = () => {
   const form = useForm({
     defaultValues: { config: config || {} },
   });
-
   useEffect(() => {
     if (config) form.setValue("config", config);
   }, [config]);
-
   useEffect(() => {
     if (isEditingCore) fetchCoreSettings();
   }, [isEditingCore]);
@@ -168,7 +162,6 @@ const CoreSettingModalContent: FC = () => {
     }, 300),
     []
   );
-
   const { readyState } = useWebSocket(getWebsocketUrl(selectedNode), {
     onMessage: (e: any) => {
       logsTmp.push(e.data);
@@ -180,7 +173,6 @@ const CoreSettingModalContent: FC = () => {
     reconnectAttempts: 10,
     reconnectInterval: 1000,
   });
-
   useEffect(() => {
     if (logsDiv.current && scrollShouldStayOnEnd.current)
       logsDiv.current.scrollTop = logsDiv.current?.scrollHeight;
@@ -194,9 +186,10 @@ const CoreSettingModalContent: FC = () => {
 
   const status = getStatus(readyState.toString());
 
-  const { mutate: handleRestartCore, isLoading: isRestarting } =
-    useMutation(restartCore);
-
+  const { mutate: handleRestartCore, isPending: isRestarting } =
+    useMutation({
+      mutationFn: restartCore,
+    });
   const handleOnSave = ({ config }: any) => {
     updateConfig(config)
       .then(() => {
@@ -215,7 +208,6 @@ const CoreSettingModalContent: FC = () => {
             e.response._data.detail[Object.keys(e.response._data.detail)[0]];
         if (typeof e.response._data.detail === "string")
           message = e.response._data.detail;
-
         toast({
           title: message,
           status: "error",
@@ -360,7 +352,6 @@ const CoreSettingModalContent: FC = () => {
               </Button>
             </Box>
           </HStack>
-
           <HStack>
             <Button
               size="sm"
@@ -383,7 +374,6 @@ export const CoreSettingsModal: FC = () => {
   const { isEditingCore } = useDashboard();
   const onClose = useDashboard.setState.bind(null, { isEditingCore: false });
   const { t } = useTranslation();
-
   return (
     <Modal isOpen={isEditingCore} onClose={onClose} size="3xl">
       <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />

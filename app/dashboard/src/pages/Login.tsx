@@ -21,9 +21,9 @@ import { Footer } from "components/Footer";
 import { Input } from "components/Input";
 import { fetch } from "service/http";
 import { removeAuthToken, setAuthToken } from "utils/authStorage";
-import { ReactComponent as Logo } from "assets/logo.svg";
 import { useTranslation } from "react-i18next";
 import { Language } from "components/Language";
+import Logo from "assets/logo.svg?react";
 
 const schema = z.object({
   username: z.string().min(1, "login.fieldRequired"),

@@ -1,7 +1,7 @@
 import time
 import traceback
 
-from app import app, logger, scheduler, xray
+from app import logger, scheduler, xray
 from app.db import GetDB, crud
 from app.models.node import NodeStatus
 from config import JOB_CORE_HEALTH_CHECK_INTERVAL
@@ -34,7 +34,6 @@ def core_health_check():
             xray.operations.connect_node(node_id, config)
 
 
-@app.on_event("startup")
 def start_core():
     logger.info("Generating Xray core config")
 
@@ -65,7 +64,6 @@ def start_core():
                       coalesce=True, max_instances=1)
 
 
-@app.on_event("shutdown")
 def app_shutdown():
     logger.info("Stopping main Xray core")
     xray.core.stop()

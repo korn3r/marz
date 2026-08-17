@@ -586,9 +586,8 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                                 colorScheme="red"
                                 variant="ghost"
                                 onClick={removeHost.bind(null, index)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
+                                icon={<DeleteIcon />}
+                              />
                             </Tooltip>
                           </Container>
                         </AccordionButton>
@@ -599,9 +598,8 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                             colorScheme="white"
                             variant="ghost"
                             onClick={() => duplicateHost(index)}
-                          >
-                            <DuplicateIcon />
-                          </IconButton>
+                            icon={<DuplicateIcon />}
+                          />
                         </Tooltip>
                         {index < hosts.length - 1 && (
                           <Tooltip label="Move Down" placement="top">
@@ -611,9 +609,8 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                               colorScheme="white"
                               variant="ghost"
                               onClick={() => moveHostPosition(index, "down")}
-                            >
-                              <DownIcon />
-                            </IconButton>
+                              icon={<DownIcon />}
+                            />
                           </Tooltip>
                         )}
                         {index > 0 && (
@@ -624,9 +621,8 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                               colorScheme="white"
                               variant="ghost"
                               onClick={() => moveHostPosition(index, "up")}
-                            >
-                              <UpIcon />
-                            </IconButton>
+                              icon={<UpIcon />}
+                            />
                           </Tooltip>
                         )}
                       </div>
@@ -666,7 +662,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                             <Input
                               size="sm"
                               borderRadius="4px"
-                              placeholder={String(inbound.port || "8080")}
+                              placeholder={String(inbound.port || "443")}
                               type="number"
                               {...form.register(
                                 hostKey + "." + index + ".port"
@@ -1081,9 +1077,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                                 hostKey + "." + index + ".use_sni_as_host"
                               )}
                             >
-                              <FormLabel>
-                                {t("hostsDialog.useSniAsHost")}
-                              </FormLabel>
+                              {t("hostsDialog.useSniAsHost")}
                             </Checkbox>
                             {accordionErrors &&
                               accordionErrors[index]?.use_sni_as_host && (
@@ -1109,9 +1103,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                               )}
                               name={hostKey + "." + index + ".allowinsecure"}
                             >
-                              <FormLabel>
-                                {t("hostsDialog.allowinsecure")}
-                              </FormLabel>
+                              {t("hostsDialog.allowinsecure")}
                               {accordionErrors &&
                                 accordionErrors[index]?.allowinsecure && (
                                   <Error>
@@ -1136,9 +1128,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                                 hostKey + "." + index + ".mux_enable"
                               )}
                             >
-                              <FormLabel>
-                                {t("hostsDialog.muxEnable")}
-                              </FormLabel>
+                              {t("hostsDialog.muxEnable")}
                             </Checkbox>
                             {accordionErrors &&
                               accordionErrors[index]?.mux_enable && (
@@ -1160,9 +1150,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                                 hostKey + "." + index + ".random_user_agent"
                               )}
                             >
-                              <FormLabel>
-                                {t("hostsDialog.randomUserAgent")}
-                              </FormLabel>
+                              {t("hostsDialog.randomUserAgent")}
                             </Checkbox>
                             {accordionErrors &&
                               accordionErrors[index]?.random_user_agent && (
@@ -1186,7 +1174,6 @@ const AccordionInbound: FC<AccordionInboundType> = ({
             variant="outline"
             w="full"
             size="sm"
-            color=""
             fontWeight={"normal"}
             onClick={handleAddHost}
           >

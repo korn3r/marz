@@ -29,8 +29,12 @@ from app.models.proxy import (
     ProxyHostSecurity,
     ProxyTypes,
 )
-from app.models.user import ReminderType, UserDataLimitResetStrategy, UserStatus
-
+from app.models.user import (
+    ReminderType,
+    UserDataLimitResetStrategy,
+    UserStatus,
+    is_inbound_globally_excluded,
+)
 
 class Admin(Base):
     __tablename__ = "admins"
@@ -126,30 +130,49 @@ class User(Base):
         return self.usage_logs[-1].reset_at if self.usage_logs else self.created_at
 
     @property
-    def excluded_inbounds(self):
-        _ = {}
-        for proxy in self.proxies:
-            _[proxy.type] = [i.tag for i in proxy.excluded_inbounds]
-        return _
-
-    @property
     def inbounds(self):
         _ = {}
         for proxy in self.proxies:
             _[proxy.type] = []
-            excluded_tags = [i.tag for i in proxy.excluded_inbounds]
+
+            excluded_tags = {
+                i.tag
+                for i in proxy.excluded_inbounds
+            }
+
+            overrides = {
+                i.tag
+                for i in proxy.inbound_exclude_overrides
+            }
+
             for inbound in xray.config.inbounds_by_protocol.get(proxy.type, []):
-                if inbound["tag"] not in excluded_tags:
-                    _[proxy.type].append(inbound["tag"])
+                tag = inbound["tag"]
+
+                if tag in excluded_tags:
+                    continue
+
+                if (
+                    is_inbound_globally_excluded(tag)
+                    and tag not in overrides
+                ):
+                    continue
+
+                _[proxy.type].append(tag)
 
         return _
-
 
 excluded_inbounds_association = Table(
     "exclude_inbounds_association",
     Base.metadata,
     Column("proxy_id", ForeignKey("proxies.id")),
     Column("inbound_tag", ForeignKey("inbounds.tag")),
+)
+
+inbound_exclude_overrides_association = Table(
+    "inbound_exclude_overrides",
+    Base.metadata,
+    Column("proxy_id", ForeignKey("proxies.id"), primary_key=True),
+    Column("inbound_tag", ForeignKey("inbounds.tag"), primary_key=True),
 )
 
 template_inbounds_association = Table(
@@ -200,7 +223,6 @@ class UserUsageResetLogs(Base):
 
 class Proxy(Base):
     __tablename__ = "proxies"
-
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="proxies")
@@ -209,7 +231,9 @@ class Proxy(Base):
     excluded_inbounds = relationship(
         "ProxyInbound", secondary=excluded_inbounds_association
     )
-
+    inbound_exclude_overrides = relationship(
+        "ProxyInbound", secondary=inbound_exclude_overrides_association
+    )
 
 class ProxyInbound(Base):
     __tablename__ = "inbounds"

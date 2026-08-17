@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { fetch } from "service/http";
 import { z } from "zod";
 import { create } from "zustand";
@@ -37,7 +37,7 @@ export const getNodeDefaultValues = (): NodeType => ({
   usage_coefficient: 1,
 });
 
-export const FetchNodesQueryKey = "fetch-nodes-query-key";
+export const FetchNodesQueryKey = ["fetch-nodes-query-key"] as const;
 
 export type NodeStore = {
   nodes: NodeType[];

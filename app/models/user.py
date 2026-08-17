@@ -11,7 +11,19 @@ from app.models.admin import Admin
 from app.models.proxy import ProxySettings, ProxyTypes
 from app.subscription.share import generate_v2ray_links
 from app.utils.jwt import create_subscription_token
-from config import XRAY_SUBSCRIPTION_PATH, XRAY_SUBSCRIPTION_URL_PREFIX
+from config import (
+    MARZBAN_INBOUND_EXCLUDE,
+    XRAY_SUBSCRIPTION_PATH,
+    XRAY_SUBSCRIPTION_URL_PREFIX,
+)
+
+
+def is_inbound_globally_excluded(tag: str) -> bool:
+    """Return True if an inbound tag matches MARZBAN_INBOUND_EXCLUDE."""
+    tag_lower = tag.lower()
+    return any(keyword.lower() in tag_lower for keyword in MARZBAN_INBOUND_EXCLUDE)
+
+
 
 USERNAME_REGEXP = re.compile(r"^(?=\w{3,32}\b)[a-zA-Z0-9-_@.]+(?:_[a-zA-Z0-9-_@.]+)*$")
 
@@ -58,7 +70,7 @@ class NextPlanModel(BaseModel):
 
 class User(BaseModel):
     proxies: Dict[ProxyTypes, ProxySettings] = {}
-    expire: Optional[int] = Field(None, nullable=True)
+    expire: Optional[int] = Field(None)
     data_limit: Optional[int] = Field(
         ge=0, default=None, description="data_limit can be 0 or greater"
     )
@@ -66,16 +78,16 @@ class User(BaseModel):
         UserDataLimitResetStrategy.no_reset
     )
     inbounds: Dict[ProxyTypes, List[str]] = {}
-    note: Optional[str] = Field(None, nullable=True)
-    sub_updated_at: Optional[datetime] = Field(None, nullable=True)
-    sub_last_user_agent: Optional[str] = Field(None, nullable=True)
-    online_at: Optional[datetime] = Field(None, nullable=True)
-    on_hold_expire_duration: Optional[int] = Field(None, nullable=True)
-    on_hold_timeout: Optional[Union[datetime, None]] = Field(None, nullable=True)
+    note: Optional[str] = Field(None)
+    sub_updated_at: Optional[datetime] = Field(None)
+    sub_last_user_agent: Optional[str] = Field(None)
+    online_at: Optional[datetime] = Field(None)
+    on_hold_expire_duration: Optional[int] = Field(None)
+    on_hold_timeout: Optional[Union[datetime, None]] = Field(None)
 
-    auto_delete_in_days: Optional[int] = Field(None, nullable=True)
+    auto_delete_in_days: Optional[int] = Field(None)
 
-    next_plan: Optional[NextPlanModel] = Field(None, nullable=True)
+    next_plan: Optional[NextPlanModel] = Field(None)
 
     @field_validator('data_limit', mode='before')
     def cast_to_int(cls, v):
@@ -179,14 +191,11 @@ class UserCreate(User):
                 for tag in tags:
                     if tag not in xray.config.inbounds_by_tag:
                         raise ValueError(f"Inbound {tag} doesn't exist")
-
-            # elif isinstance(tags, list) and not tags:
-            #     raise ValueError(f"{proxy_type} inbounds cannot be empty")
-
             else:
                 inbounds[proxy_type] = [
                     i["tag"]
                     for i in xray.config.inbounds_by_protocol.get(proxy_type, [])
+                    if not is_inbound_globally_excluded(i["tag"])
                 ]
 
         return inbounds

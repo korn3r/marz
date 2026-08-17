@@ -19,6 +19,7 @@ from config import (
     USER_AGENT_TEMPLATE,
     V2RAY_SETTINGS_TEMPLATE,
     V2RAY_SUBSCRIPTION_TEMPLATE,
+    VLESS_ENC,
 )
 
 
@@ -234,19 +235,29 @@ class V2rayShareLink(str):
                 payload["mode"] = "gun"
 
         elif net in ("splithttp", "xhttp"):
-            extra = {
-                "scMaxEachPostBytes": sc_max_each_post_bytes,
-                "scMaxConcurrentPosts": sc_max_concurrent_posts,
-                "scMinPostsIntervalMs": sc_min_posts_interval_ms,
-                "xPaddingBytes": x_padding_bytes,
-                "noGRPCHeader": noGRPCHeader,
-            }
+            extra = {}
+            if sc_max_each_post_bytes != 1000000:
+                extra["scMaxEachPostBytes"] = sc_max_each_post_bytes
+
+            if sc_max_concurrent_posts != 100:
+                extra["scMaxConcurrentPosts"] = sc_max_concurrent_posts
+
+            if sc_min_posts_interval_ms != 30:
+                extra["scMinPostsIntervalMs"] = sc_min_posts_interval_ms
+
+            if x_padding_bytes != "100-1000":
+                extra["xPaddingBytes"] = x_padding_bytes
+
+            if noGRPCHeader:
+                extra["noGRPCHeader"] = True
+
             if xmux:
                 extra["xmux"] = xmux
             payload["type"] = mode
             if keepAlivePeriod > 0:
                 extra["keepAlivePeriod"] = keepAlivePeriod
-            payload["extra"] = extra
+            if extra:
+                payload["extra"] = extra
 
         elif net == "ws":
             if heartbeatPeriod:
@@ -294,7 +305,8 @@ class V2rayShareLink(str):
         payload = {
             "security": tls,
             "type": net,
-            "headerType": type
+            "headerType": type,
+            "encryption": VLESS_ENC
         }
         if flow and (tls in ('tls', 'reality') and net in ('tcp', 'raw', 'kcp') and type != 'http'):
             payload['flow'] = flow
@@ -315,18 +327,28 @@ class V2rayShareLink(str):
             payload["path"] = path
             payload["host"] = host
             payload["mode"] = mode
-            extra = {
-                "scMaxEachPostBytes": sc_max_each_post_bytes,
-                "scMaxConcurrentPosts": sc_max_concurrent_posts,
-                "scMinPostsIntervalMs": sc_min_posts_interval_ms,
-                "xPaddingBytes": x_padding_bytes,
-                "noGRPCHeader": noGRPCHeader,
-            }
+            extra = {}
+            if sc_max_each_post_bytes != 1000000:
+                extra["scMaxEachPostBytes"] = sc_max_each_post_bytes
+
+            if sc_max_concurrent_posts != 100:
+                extra["scMaxConcurrentPosts"] = sc_max_concurrent_posts
+
+            if sc_min_posts_interval_ms != 30:
+                extra["scMinPostsIntervalMs"] = sc_min_posts_interval_ms
+
+            if x_padding_bytes != "100-1000":
+                extra["xPaddingBytes"] = x_padding_bytes
+
+            if noGRPCHeader:
+                extra["noGRPCHeader"] = True
+
             if keepAlivePeriod > 0:
                 extra["keepAlivePeriod"] = keepAlivePeriod
             if xmux:
                 extra["xmux"] = xmux
-            payload["extra"] = json.dumps(extra)
+            if extra:
+                payload["extra"] = json.dumps(extra, separators=(",", ":"))
 
         elif net == 'kcp':
             payload['seed'] = path
@@ -419,18 +441,28 @@ class V2rayShareLink(str):
             payload["path"] = path
             payload["host"] = host
             payload["mode"] = mode
-            extra = {
-                "scMaxEachPostBytes": sc_max_each_post_bytes,
-                "scMaxConcurrentPosts": sc_max_concurrent_posts,
-                "scMinPostsIntervalMs": sc_min_posts_interval_ms,
-                "xPaddingBytes": x_padding_bytes,
-                "noGRPCHeader": noGRPCHeader,
-            }
+            extra = {}
+            if sc_max_each_post_bytes != 1000000:
+                extra["scMaxEachPostBytes"] = sc_max_each_post_bytes
+
+            if sc_max_concurrent_posts != 100:
+                extra["scMaxConcurrentPosts"] = sc_max_concurrent_posts
+
+            if sc_min_posts_interval_ms != 30:
+                extra["scMinPostsIntervalMs"] = sc_min_posts_interval_ms
+
+            if x_padding_bytes != "100-1000":
+                extra["xPaddingBytes"] = x_padding_bytes
+
+            if noGRPCHeader:
+                extra["noGRPCHeader"] = True
+
             if keepAlivePeriod > 0:
                 extra["keepAlivePeriod"] = keepAlivePeriod
             if xmux:
                 extra["xmux"] = xmux
-            payload["extra"] = json.dumps(extra)
+            if extra:
+                payload["extra"] = json.dumps(extra, separators=(",", ":"))
 
         elif net == 'quic':
             payload['key'] = path
@@ -800,7 +832,6 @@ class V2rayJsonConfig(str):
                         {
                             "id": id,
                             "alterId": 0,
-                            "email": "https://gozargah.github.io/marzban/",
                             "security": "auto"
                         }
                     ],
@@ -819,8 +850,7 @@ class V2rayJsonConfig(str):
                         {
                             "id": id,
                             "security": "auto",
-                            "encryption": "none",
-                            "email": "https://gozargah.github.io/marzban/",
+                            "encryption": VLESS_ENC,
                             "alterId": 0,
                             "flow": flow
                         }
@@ -837,7 +867,6 @@ class V2rayJsonConfig(str):
                     "address": address,
                     "port": port,
                     "password": password,
-                    "email": "https://gozargah.github.io/marzban/",
                 }
             ]
         }
@@ -850,7 +879,6 @@ class V2rayJsonConfig(str):
                     "address": address,
                     "port": port,
                     "password": password,
-                    "email": "https://gozargah.github.io/marzban/",
                     "method": method,
                     "uot": False,
                 }

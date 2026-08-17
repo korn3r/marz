@@ -39,12 +39,12 @@ class NodeCreate(Node):
 
 
 class NodeModify(Node):
-    name: Optional[str] = Field(None, nullable=True)
-    address: Optional[str] = Field(None, nullable=True)
-    port: Optional[int] = Field(None, nullable=True)
-    api_port: Optional[int] = Field(None, nullable=True)
-    status: Optional[NodeStatus] = Field(None, nullable=True)
-    usage_coefficient: Optional[float] = Field(None, nullable=True)
+    name: Optional[str] = Field(None)
+    address: Optional[str] = Field(None)
+    port: Optional[int] = Field(None)
+    api_port: Optional[int] = Field(None)
+    status: Optional[NodeStatus] = Field(None)
+    usage_coefficient: Optional[float] = Field(None)
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "name": "DE node",

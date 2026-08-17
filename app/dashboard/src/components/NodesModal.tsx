@@ -53,7 +53,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-} from "react-query";
+} from "@tanstack/react-query";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import { Status } from "types/User";
@@ -111,24 +111,30 @@ const NodeAccordion: FC<AccordionInboundType> = ({ toggleAccordion, node }) => {
   });
   const handleDeleteNode = setDeletingNode.bind(null, node);
 
-  const { isLoading, mutate } = useMutation(updateNode, {
+  const { isPending, mutate } = useMutation({
+    mutationFn: updateNode,
     onSuccess: () => {
       generateSuccessMessage("Node updated successfully", toast);
-      queryClient.invalidateQueries(FetchNodesQueryKey);
+      queryClient.invalidateQueries({
+        queryKey: FetchNodesQueryKey,
+      });
     },
     onError: (e) => {
       generateErrorMessage(e, toast, form);
     },
   });
 
-  const { isLoading: isReconnecting, mutate: reconnect } = useMutation(
-    reconnectNode.bind(null, node),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(FetchNodesQueryKey);
-      },
-    }
-  );
+  const {
+    isPending: isReconnecting,
+    mutate: reconnect,
+  } = useMutation({
+    mutationFn: reconnectNode.bind(null, node),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: FetchNodesQueryKey,
+      });
+    },
+  });
 
   const nodeStatus: Status = isReconnecting
     ? "connecting"
@@ -211,7 +217,7 @@ const NodeAccordion: FC<AccordionInboundType> = ({ toggleAccordion, node }) => {
         <NodeForm
           form={form}
           mutate={mutate}
-          isLoading={isLoading}
+          isLoading={isPending}
           submitBtnText={t("nodes.editNode")}
           btnLeftAdornment={
             <Tooltip label={t("delete")} placement="top">
@@ -252,13 +258,16 @@ const AddNodeForm: FC<AddNodeFormType> = ({
       add_as_new_host: false,
     },
   });
-  const { isLoading, mutate } = useMutation(addNode, {
+  const { isPending, mutate } = useMutation({
+    mutationFn: addNode,
     onSuccess: () => {
       generateSuccessMessage(
         t("nodes.addNodeSuccess", { name: form.getValues("name") }),
         toast
       );
-      queryClient.invalidateQueries(FetchNodesQueryKey);
+      queryClient.invalidateQueries({
+        queryKey: FetchNodesQueryKey,
+      });
       form.reset();
       resetAccordions();
     },
@@ -295,7 +304,7 @@ const AddNodeForm: FC<AddNodeFormType> = ({
         <NodeForm
           form={form}
           mutate={mutate}
-          isLoading={isLoading}
+          isLoading={isPending}
           submitBtnText={t("nodes.addNode")}
           btnProps={{ variant: "solid" }}
           addAsHost
@@ -327,7 +336,7 @@ const NodeForm: NodeFormType = ({
   const { t } = useTranslation();
   const [showCertificate, setShowCertificate] = useState(false);
   const { data: nodeSettings, isLoading: nodeSettingsLoading } = useQuery({
-    queryKey: "node-settings",
+    queryKey: ["node-settings"],
     queryFn: () =>
       fetch<{
         min_node_version: string;
