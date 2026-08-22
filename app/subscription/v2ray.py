@@ -27,6 +27,16 @@ class V2rayShareLink(str):
     def __init__(self):
         self.links = []
 
+        try:
+            self.settings = json.loads(render_template(V2RAY_SETTINGS_TEMPLATE))
+        except TemplateNotFound:
+            self.settings = {}
+
+    def _get_extra_from_settings(self) -> dict:
+        """Получает extra из settings.json"""
+        xhttp = self.settings.get("xhttpSettings", {})
+        return xhttp.get("extra", {})
+
     def add_link(self, link):
         self.links.append(link)
 
@@ -38,6 +48,7 @@ class V2rayShareLink(str):
         return self.links
 
     def add(self, remark: str, address: str, inbound: dict, settings: dict):
+        import json
         net = inbound["network"]
         multi_mode = inbound.get("multiMode", False)
         old_path: str = inbound["path"]
@@ -52,8 +63,7 @@ class V2rayShareLink(str):
         else:
             path = old_path
 
-        # Получаем extra из конфига
-        extra = inbound.get("extra", {})
+        extra = self._get_extra_from_settings()
         mode = inbound.get("mode", "auto")
 
         if inbound["protocol"] == "vmess":
@@ -538,7 +548,6 @@ class V2rayJsonConfig(str):
                          ) -> dict:
         config = copy.deepcopy(self.settings.get("xhttpSettings", {}))
 
-        # Основные настройки верхнего уровня
         config["mode"] = mode
         if path:
             config["path"] = path
@@ -546,10 +555,6 @@ class V2rayJsonConfig(str):
             config["host"] = host
         if random_user_agent:
             config["headers"]["User-Agent"] = choice(self.user_agent_list)
-
-        # Добавляем extra, если он не пустой
-        if extra:
-            config["extra"] = extra
 
         return config
 
@@ -871,7 +876,6 @@ class V2rayJsonConfig(str):
                 path=path, 
                 host=host, 
                 random_user_agent=random_user_agent,
-                extra=extra,
                 mode=mode,
             )
         else:
@@ -975,7 +979,6 @@ class V2rayJsonConfig(str):
             dialer_proxy=dialer_proxy,
             multiMode=multi_mode,
             random_user_agent=inbound.get('random_user_agent', False),
-            extra=inbound.get('extra', {}),
             mode=inbound.get('mode', 'auto'),
             heartbeatPeriod=inbound.get('heartbeatPeriod', 0),
         )

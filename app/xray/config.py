@@ -309,28 +309,6 @@ class XRayConfig(dict):
                     settings['path'] = net_settings.get('path', '')
                     host = net_settings.get('host', '')
                     settings['host'] = [host]
-
-                    xhttp_params = {
-                        'scMaxEachPostBytes': 1000000,
-                        'scMaxConcurrentPosts': 100,
-                        'scMinPostsIntervalMs': 30,
-                        'xPaddingBytes': "100-1000",
-                        'noGRPCHeader': False,
-                        'keepAlivePeriod': 0,
-                        'xmux': {},
-                    }
-
-                    extra = {}
-                    for param, default_value in xhttp_params.items():
-                        value = net_settings.get(param, default_value)
-                        if value != default_value:
-                            extra[param] = value
-
-                    if extra:
-                        settings['extra'] = extra
-#                    else:
-#                        settings['extra'] = {}  # или вообще не создавать
-
                     settings["mode"] = net_settings.get("mode", "auto")
 
                 elif net == 'kcp':
