@@ -48,7 +48,6 @@ class V2rayShareLink(str):
         return self.links
 
     def add(self, remark: str, address: str, inbound: dict, settings: dict):
-        import json
         net = inbound["network"]
         multi_mode = inbound.get("multiMode", False)
         old_path: str = inbound["path"]
