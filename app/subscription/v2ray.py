@@ -635,7 +635,7 @@ class V2rayJsonConfig(str):
                          noGRPCHeader: bool = False,
                          keepAlivePeriod: int = 0,
                          ) -> dict:
-        config = copy.deepcopy(self.settings.get("splithttpSettings", {}))
+        config = copy.deepcopy(self.settings.get("xhttpSettings", {}))
 
         config["mode"] = mode
         if path:
