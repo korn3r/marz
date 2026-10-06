@@ -847,6 +847,7 @@ class V2rayJsonConfig(str):
                             extra: dict = {},
                             mode: str = "auto",
                             heartbeatPeriod: int = 0,
+                            sockopt: dict = None,
                             ) -> dict:
 
         if net == "ws":
@@ -888,17 +889,17 @@ class V2rayJsonConfig(str):
         else:
             tls_settings = None
 
+        # Формируем sockopt: берём из inbound и добавляем dialerProxy, если есть
+        final_sockopt = {}
+        if sockopt:
+            final_sockopt.update(sockopt)
         if dialer_proxy:
-            sockopt = {
-                "dialerProxy": dialer_proxy
-            }
-        else:
-            sockopt = None
+            final_sockopt["dialerProxy"] = dialer_proxy
 
         return self.stream_setting_config(network=net, security=tls,
                                           network_setting=network_setting,
                                           tls_settings=tls_settings,
-                                          sockopt=sockopt)
+                                          sockopt=final_sockopt or None)
 
     def add(self, remark: str, address: str, inbound: dict, settings: dict):
 
@@ -980,6 +981,7 @@ class V2rayJsonConfig(str):
             random_user_agent=inbound.get('random_user_agent', False),
             mode=inbound.get('mode', 'auto'),
             heartbeatPeriod=inbound.get('heartbeatPeriod', 0),
+            sockopt=inbound.get('sockopt'),
         )
 
         mux_json = json.loads(self.mux_template)

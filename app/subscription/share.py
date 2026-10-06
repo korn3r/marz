@@ -1,4 +1,6 @@
 import base64
+import json
+import os
 import random
 import secrets
 from collections import defaultdict
@@ -18,10 +20,12 @@ if TYPE_CHECKING:
 
 from config import (
     ACTIVE_STATUS_TEXT,
+    CUSTOM_TEMPLATES_DIRECTORY,
     DISABLED_STATUS_TEXT,
     EXPIRED_STATUS_TEXT,
     LIMITED_STATUS_TEXT,
     ONHOLD_STATUS_TEXT,
+    V2RAY_SETTINGS_TEMPLATE,
 )
 
 SERVER_IP = get_public_ip()
@@ -42,6 +46,25 @@ STATUS_TEXTS = {
     "disabled": DISABLED_STATUS_TEXT,
     "on_hold": ONHOLD_STATUS_TEXT,
 }
+
+
+def load_settings_sockopt() -> dict | None:
+    """
+    Загружает блок sockopt из settings.json (клиентского шаблона).
+    Возвращает None, если файл не найден, невалиден или блок отсутствует.
+    """
+    if not V2RAY_SETTINGS_TEMPLATE:
+        return None
+
+    template_path = os.path.join(CUSTOM_TEMPLATES_DIRECTORY, V2RAY_SETTINGS_TEMPLATE)
+    try:
+        with open(template_path, "r") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+    sockopt = data.get("sockopt")
+    return sockopt if isinstance(sockopt, dict) and sockopt else None
 
 
 def generate_v2ray_links(proxies: dict, inbounds: dict, extra_data: dict, reverse: bool) -> list:
@@ -252,6 +275,9 @@ def process_inbounds_and_tags(
     inbounds = sorted(
         _inbounds, key=lambda x: index_dict.get(x[1][0], float('inf')))
 
+    # Загружаем sockopt из settings.json один раз для всех инбаундов
+    settings_sockopt = load_settings_sockopt()
+
     for protocol, tags in inbounds:
         settings = proxies.get(protocol)
         if not settings:
@@ -265,6 +291,7 @@ def process_inbounds_and_tags(
 
             format_variables.update({"TRANSPORT": inbound["network"]})
             host_inbound = inbound.copy()
+
             for host in xray.hosts.get(tag, []):
                 sni = ""
                 sni_list = host["sni"] or inbound["sni"]
@@ -312,6 +339,10 @@ def process_inbounds_and_tags(
                         "random_user_agent": host["random_user_agent"],
                     }
                 )
+
+                # Добавляем sockopt ТОЛЬКО из settings.json (если он там есть)
+                if settings_sockopt:
+                    host_inbound["sockopt"] = settings_sockopt
 
                 conf.add(
                     remark=host["remark"].format_map(format_variables),
