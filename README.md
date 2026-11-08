@@ -50,6 +50,8 @@ UPDATE alembic_version SET version_num = '2b231de97dc3';
 
 - xHTTP extra headers scMaxEachPostBytes, scMaxConcurrentPosts, scMinPostsIntervalMs, scMinPostsIntervalMs and noGRPCHeader are sent only if set to non-default values in xray inbound (defaults are 1000000, 100, 30, 100-1000 and False)
 
+- Panel now properly insert settings from settings.json into client config (including sockopt parameters). xHTTP entry is called "xhttpSettings"
+
 - Updated some python libraries and dashboard modules (at least no more critical security issues during dashboard build, yay!).
 
 - flow is always set to xtls-rprx-vision if security is Reality or TLS (Only if tls done by xray itself). Option for setting flow in user card is removed because its not used anyumore. Database entry for flow is not removed for compatability reasons.
