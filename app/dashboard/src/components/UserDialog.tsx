@@ -296,10 +296,21 @@ export const UserDialog: FC<UserDialogProps> = () => {
 
     const { selected_proxies, ...rest } = values;
 
+    // Сохраняем текущее значение flow из БД при редактировании,
+    // чтобы не затирать его пустой строкой (совместимость с оригинальным Marzban)
+    const currentVlessFlow =
+      (editingUser?.proxies?.vless as any)?.flow ?? "";
+
     let body: UserCreate = {
       ...rest,
       data_limit: values.data_limit,
-      proxies: mergeProxies(selected_proxies, values.proxies),
+      proxies: mergeProxies(selected_proxies, {
+        ...values.proxies,
+        vless: {
+          ...values.proxies.vless,
+          flow: currentVlessFlow,
+        },
+      }),
       data_limit_reset_strategy:
         values.data_limit && values.data_limit > 0
           ? values.data_limit_reset_strategy

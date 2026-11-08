@@ -292,6 +292,14 @@ def process_inbounds_and_tags(
             format_variables.update({"TRANSPORT": inbound["network"]})
             host_inbound = inbound.copy()
 
+            # Автоматически выставляем flow xtls-rprx-vision для Reality-инбаундов VLESS
+            settings_dump = settings.model_dump()
+            if (
+                protocol.name == "vless"
+                and inbound.get("tls") == "reality"
+            ):
+                settings_dump["flow"] = "xtls-rprx-vision"
+
             for host in xray.hosts.get(tag, []):
                 sni = ""
                 sni_list = host["sni"] or inbound["sni"]
@@ -348,7 +356,7 @@ def process_inbounds_and_tags(
                     remark=host["remark"].format_map(format_variables),
                     address=address.format_map(format_variables),
                     inbound=host_inbound,
-                    settings=settings.model_dump()
+                    settings=settings_dump
                 )
 
     return conf.render(reverse=reverse)

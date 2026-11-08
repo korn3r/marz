@@ -449,6 +449,18 @@ class XRayConfig(dict):
                             **settings
                         }
 
+                        # flow управляется панелью, а не настройками пользователя.
+                        # Vision выдаётся, если TLS/Reality терминируется на самом Xray
+                        # (security = tls или reality в streamSettings) и транспорт совместим.
+                        client.pop('flow', None)
+                        if (
+                                inbound.get('protocol') == 'vless'
+                                and inbound.get('tls') in ('tls', 'reality')
+                                and inbound.get('network') in ('tcp', 'raw', 'kcp')
+                                and inbound.get('header_type') != 'http'
+                        ):
+                                client['flow'] = 'xtls-rprx-vision'
+
                         # XTLS currently only supports transmission methods of TCP and mKCP
                         if client.get('flow') and (
                                 inbound.get('network', 'tcp') not in ('tcp', 'raw', 'kcp')

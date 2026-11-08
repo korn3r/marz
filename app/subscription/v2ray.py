@@ -96,7 +96,11 @@ class V2rayShareLink(str):
                 address=address,
                 port=inbound["port"],
                 id=settings["id"],
-                flow=settings.get("flow", ""),
+                flow="xtls-rprx-vision"
+                if inbound["tls"] in ("tls", "reality")
+                and net in ("tcp", "raw", "kcp")
+                and inbound.get("header_type") != "http"
+                else "",
                 net=net,
                 tls=inbound["tls"],
                 sni=inbound.get("sni", ""),
@@ -935,7 +939,7 @@ class V2rayJsonConfig(str):
 
         elif inbound['protocol'] == 'vless':
             if net in ('tcp', 'raw', 'kcp') and headers != 'http' and tls in ('tls', 'reality'):
-                flow = settings.get('flow', '')
+                flow = 'xtls-rprx-vision'
             else:
                 flow = None
 
