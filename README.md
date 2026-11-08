@@ -52,6 +52,12 @@ UPDATE alembic_version SET version_num = '2b231de97dc3';
 
 - Updated some python libraries and dashboard modules (at least no more critical security issues during dashboard build, yay!).
 
+- flow is always set to xtls-rprx-vision if security is Reality or TLS (Only if tls done by xray itself). Option for setting flow in user card is removed because its not used anyumore. Database entry for flow is not removed for compatability reasons.
+
+# Rebuilding dashboard
+
+If you want to rebuild bashboard via build_dashboard.sh, you need to install nodejs and typescript packages and do "npm install" in app/dashboard folder before running build_bashboard.sh
+
 ## Authors / Contributors
 
 - korn3r — implementation, testing and integration
